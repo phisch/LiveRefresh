@@ -1,16 +1,16 @@
 {
-    "name": "LiveReload",
+    "name": "LiveRefresh",
     "version": "1.0",
     "manifest_version": 2,
-    "description": "This Plugin connects via TCP-Socket to a TCP-Server from a Text-Editor Plugin and reloads the page as the editor saves some changes.",
+    "description": "This Plugin lets you independently connect your Browser-Tabs to WebSocket-Server and each time, a tab received the message \"refresh\" it will focus the Tab and refresh its content.",
     "browser_action": {
         "default_icon": "img/icon.png",
         "default_popup": "popup.html"
     },
     "background": {
-    	"scripts": ["js/background.js"]
-  	},
+        "scripts": ["js/background.js"]
+    },
     "permissions": [
-    	"tabs"
-  	]
+        "tabs"
+    ]
 }
