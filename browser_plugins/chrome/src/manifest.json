@@ -2,7 +2,7 @@
     "name": "LiveRefresh",
     "version": "1.0",
     "manifest_version": 2,
-    "description": "This Plugin lets you independently connect your Browser-Tabs to WebSocket-Server and each time, a tab received the message \"refresh\" it will focus the Tab and refresh its content.",
+    "description": "Lets you independently connect your tabs to WebSocket-Server. Each time, a tab received \"refresh\" it will focus and refresh.",
     "browser_action": {
         "default_icon": "img/icon.png",
         "default_popup": "popup.html"

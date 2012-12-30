@@ -1,3 +1,4 @@
+*.zip
 *.pem
 *.pyc
 *.cache
