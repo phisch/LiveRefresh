@@ -3,77 +3,120 @@
 var background =
 {
     button: null                // Widget button 
-  , tabs: new Array()           // Associative array tab <-> open socket. 
+  , tabs: new Array()           // tabId -> tab:BrowserTab, socket:WebSocket, host, port
   , Init: function()
     {
       window.addEventListener("load", this.onLoad(), false); // Constructor for the widget
     }
   , onLoad: function()
             {
-              var self = this; // The crutche for access to object into anonymous function.
+              var self = this; // The crutch for access to object into anonymous function.
 
               var ToolbarUIItemProperties =
               {
-                title: "LiveRefresh",
-                icon: "img/icon.png",
-                popup: {
-                  href: "popup.html",
-                  width: 400,
-                  height: 40
-                },
-                badge: {
-                  display: "block",
-                  textContent: "12",
-                  color: "white",
-                  backgroundColor: "rgba(211, 0, 4, 1)"
-                }
-              };
+                  title: "LiveRefreshDev"
+                , icon: "img/icon.png"
+                , popup: {
+                    href: "popup.html", 
+                    width: 400,
+                    height: 40
+                  }
+              }; 
               this.button = opera.contexts.toolbar.createItem(ToolbarUIItemProperties);
               opera.contexts.toolbar.addItem(this.button);
 
               opera.extension.tabs.onfocus = function() { self.onFocus(); };
+              opera.extension.onconnect = function(event)
+                                          {
+                                            var tabId = opera.extension.tabs.getFocused().id;
+                                            var status = self.tabs[tabId] != undefined;
+                                            // It's magic, but our extension drops, when we try used host and port fields
+                                            // I will try fix it in next iteration
+                                            var host = 'Localhost'; // self.tabs[tabId].host;
+                                            var port = 1025; // self.tabs[tabId].port;
+
+                                            event.source.postMessage( {
+                                                                          'tabId': tabId 
+                                                                        , 'status': status
+                                                                        , 'host': host
+                                                                        , 'port': port
+                                                                      } );
+                                          }
+
               opera.extension.onmessage = function(event) { self.onMessage(event); };
             }
   , onFocus: function () // Handler for changing the active tab
               {
                 if ( this.tabs[opera.extension.tabs.getFocused().id] != undefined )
                 {
-                  this.updateIcon('active'); 
+                  this.updateIcon('active');
                 }
                 else
                 {
                   this.updateIcon('passive');
                 }
               }
-  , onMessage: function(event) 
-                {
-                  //url = event.data; 
-                }          
-  , connect: function(host, port) 
+  , onMessage: function(event)
+                { 
+                  var action = event.data.action;
+                  var tabId = opera.extension.tabs.getFocused().id;
+
+                  if ( action == 'connect' )
+                  {
+                    var host = event.data.host;
+                    var port = event.data.port;
+
+                    if (host.length == 0)
+                    {
+                      host = 'localhost';
+                    }
+                    if (port.length == 0)
+                    {
+                      port = '1025';
+                    }
+
+                    this.connect(host, port, tabId);
+                  }
+                  else if ( action == 'disconnect' )
+                  {
+                    this.disconnect(tabId);
+                  }
+                  
+                }
+  , connect: function(host, port, tabId)
               {
                 var self = this; // The crutche for access to object into anonymous function.
-                var tabId = opera.extension.tabs.getFocused().id;
 
-                if (host.length == 0)
-                {
-                  host = 'localhost';
-                }
-                if (port.length == 0)
-                {
-                  port = '1025';  
-                }
+                this.tabs[tabId] = {
+                                      'tab': opera.extension.tabs.getFocused()
+                                    , 'socket': new WebSocket('ws://' + host + ':' + port)
+                                    , 'host': host
+                                    , 'port': port
+                                  }
 
-                this.tabs[tabId] = new WebSocket('ws://' + host + ':' + port);
-                this.tabs[tabId].onopen = function () { opera.postError('onopen'); self.onSocketOpen(); };
-                this.tabs[tabId].onclose = function(event) { opera.postError('onclose'); self.onSocketClose(event); };
-                this.tabs[tabId].onmessage = function(event) { opera.postError('onmessage'); self.onSocketMessage(event); };
-                this.tabs[tabId].onerror = function(event) { opera.postError('onerror'); self.onSocketError(event); };
-
-                //return opera.extension.tabs.getFocused(); 
+                this.tabs[tabId].socket.onopen = function () { self.onSocketOpen(); };
+                this.tabs[tabId].socket.onclose = function(event) { self.onSocketClose(event); };
+                this.tabs[tabId].socket.onmessage = function(event)
+                                                    { 
+                                                      self.onSocketMessage( event,
+                                                                            function ()
+                                                                            {
+                                                                               self.tabs[tabId].tab.refresh();
+                                                                            }
+                                                                          );
+                                                    };
+                this.tabs[tabId].socket.onerror = function(event) { self.onSocketError(event); };
               }
-  , onSocketOpen: function () 
-                  { 
-                    this.updateIcon('active'); 
+  , disconnect: function(tabId)
+                 {
+                    this.tabs[tabId].socket.onclose = function(event) {};
+                    this.tabs[tabId].socket.close();
+                    this.tabs[tabId] = null;
+                    this.updateIcon('passive');
+                 }
+  , onSocketOpen: function ()
+                  {
+                    this.updateIcon('active');
                   }
   , onSocketClose: function (event)
                   {
@@ -82,30 +125,26 @@ var background =
                     } else {
                       // Break connection
                     }
-                    this.button.badge.textContent = 'close';
+                    opera.postError('Socket closed');
                   }
-  , onSocketMessage: function (event)
+  , onSocketMessage: function (event, refresh)
                       {
-                        this.button.badge.textContent = Math.random();
+                        refresh();
                       }
   , onSocketError: function (error)
                     {
                       // We have the problem, but I don't know what we should do :(
-                      this.button.badge.textContent = 'Error';
+                      opera.postError('Error');
                     }
-  , disconnect: function()
-                 {
-                    this.updateIcon('passive');
-                 }
-  , updateIcon: function (type)
+  , updateIcon: function (type) 
                 {
                   if (type == 'active')
                   {
                     this.button.icon = "img/icon_active.png";
                   } else {
-                    this.button.icon = "img/icon.png";
+                    this.button.icon = "img/icon.png"; 
                   }
                 }
-}
+};
 
 background.Init();

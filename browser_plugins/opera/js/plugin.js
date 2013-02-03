@@ -1,27 +1,61 @@
 $(document).ready(function() {
-  var background, connectButton, disconnectButton, hostField, portField;
-  background = opera.extension.bgProcess.background;
-  hostField = $('form#socketform #host');
-  portField = $('form#socketform #port');
-  connectButton = $('form#socketform #connect');
-  disconnectButton = $('form#socketform #disconnect');
+  var source;
+  var self = this;
 
-  connectButton.on("click", function(e) {
-    e.preventDefault();
-    if ($(e.target).hasClass("disabled")) {
-      return;
-    }
-    background.connect(hostField.val(), portField.val());
+  var hostField = $('form#socketform #host');
+  var portField = $('form#socketform #port');
+  var connectButton = $('form#socketform #connect');
+  var disconnectButton = $('form#socketform #disconnect');
 
-    return window.close();
-  });
-  
-  disconnectButton.on("click", function(e) {
-    e.preventDefault();
-    if ($(e.target).hasClass("disabled")) {
-      return;
-    }
-    background.disconnect();
-    return window.close();
-  });
+  var update = function( status, host, port )
+                {
+                  if ( status == true )
+                  {
+                    connectButton.addClass('disabled');
+                    disconnectButton.removeClass('disabled');
+                  }
+                  else
+                  {
+                    connectButton.removeClass('disabled');
+                    disconnectButton.addClass('disabled');
+                  }
+
+                  hostField.attr( 'placeholder', host );
+                  portField.attr( 'placeholder', port );
+                }
+
+  opera.extension.onmessage = function(event)
+                              {
+                                source = event.source; 
+
+                                update( event.data.status, event.data.host, event.data.port );
+                              }
+   
+  connectButton.on("click",
+                  function(e)
+                  { 
+                    e.preventDefault(); 
+                    if ($(e.target).hasClass("disabled")) { return; }
+
+                    source.postMessage( {
+                                            'action': 'connect'
+                                          , 'host': hostField.val()
+                                          , 'port': portField.val()
+                                        } );
+
+                    return window.close();
+                  });
+   
+  disconnectButton.on("click",
+                      function(e)
+                      { 
+                        e.preventDefault();
+                        if ($(e.target).hasClass("disabled")) { return; }
+
+                        source.postMessage( {
+                                              'action': 'disconnect'
+                                            } );
+
+                        return window.close();
+                      });
 });
