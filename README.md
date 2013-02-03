@@ -6,6 +6,7 @@ This repository includes the browser- extensions/plugins too.
 ### Supported Browsers
 
 * Google Chrome
+* Opera
 
 ## Installation
 

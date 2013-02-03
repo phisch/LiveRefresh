@@ -6,15 +6,15 @@ var background =
   , tabs: new Array()           // tabId -> tab:BrowserTab, socket:WebSocket, host, port
   , Init: function()
     {
-      window.addEventListener("load", this.onLoad(), false); // Constructor for the widget
+      window.addEventListener("load", this.onLoad(), false); // Call constructor after load
     }
-  , onLoad: function()
+  , onLoad: function() // Constructor for the extension
             {
               var self = this; // The crutch for access to object into anonymous function.
 
               var ToolbarUIItemProperties =
               {
-                  title: "LiveRefreshDev"
+                  title: "LiveRefresh"
                 , icon: "img/icon.png"
                 , popup: {
                     href: "popup.html", 
@@ -22,18 +22,21 @@ var background =
                     height: 40
                   }
               }; 
-              this.button = opera.contexts.toolbar.createItem(ToolbarUIItemProperties);
+              this.button = opera.contexts.toolbar.createItem(ToolbarUIItemProperties); 
               opera.contexts.toolbar.addItem(this.button);
 
-              opera.extension.tabs.onfocus = function() { self.onFocus(); };
-              opera.extension.onconnect = function(event)
+              opera.extension.tabs.onfocus = function() { self.onFocus(); }; // Action for each switching tabs
+              opera.extension.onconnect = function(event) // Post message to popup with status connection of current tab
                                           {
                                             var tabId = opera.extension.tabs.getFocused().id;
                                             var status = self.tabs[tabId] != undefined;
-                                            // It's magic, but our extension drops, when we try used host and port fields
-                                            // I will try fix it in next iteration
-                                            var host = 'Localhost'; // self.tabs[tabId].host;
-                                            var port = 1025; // self.tabs[tabId].port;
+
+                                            var host, port;
+                                            if (status) // If connection exist, we write current host/port to inputs placeholder
+                                            {
+                                              host = self.tabs[tabId].host;
+                                              port = self.tabs[tabId].port;
+                                            }
 
                                             event.source.postMessage( {
                                                                           'tabId': tabId 
@@ -56,7 +59,7 @@ var background =
                   this.updateIcon('passive');
                 }
               }
-  , onMessage: function(event)
+  , onMessage: function(event) // Handler for incoming messages
                 { 
                   var action = event.data.action;
                   var tabId = opera.extension.tabs.getFocused().id;
@@ -81,7 +84,6 @@ var background =
                   {
                     this.disconnect(tabId);
                   }
-                  
                 }
   , connect: function(host, port, tabId)
               {
@@ -95,9 +97,10 @@ var background =
                                   }
 
                 this.tabs[tabId].socket.onopen = function () { self.onSocketOpen(); };
-                this.tabs[tabId].socket.onclose = function(event) { self.onSocketClose(event); };
+                this.tabs[tabId].socket.onclose = function(event) { self.onSocketClose( event, tabId ); };
                 this.tabs[tabId].socket.onmessage = function(event)
                                                     { 
+                                                      // Refreshing the target tab after receive message through socket
                                                       self.onSocketMessage( event,
                                                                             function ()
                                                                             {
@@ -118,14 +121,9 @@ var background =
                   {
                     this.updateIcon('active');
                   }
-  , onSocketClose: function (event)
+  , onSocketClose: function (event, tabId)
                   {
-                    if (event.wasClean) {
-                      // Closed as normal
-                    } else {
-                      // Break connection
-                    }
-                    opera.postError('Socket closed');
+                    this.disconnect( tabId ); // If the connection aborted we close socket
                   }
   , onSocketMessage: function (event, refresh)
                       {
@@ -134,7 +132,6 @@ var background =
   , onSocketError: function (error)
                     {
                       // We have the problem, but I don't know what we should do :(
-                      opera.postError('Error');
                     }
   , updateIcon: function (type) 
                 {

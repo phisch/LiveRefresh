@@ -1,6 +1,5 @@
 $(document).ready(function() {
-  var source;
-  var self = this;
+  var source; // The channel for messaging
 
   var hostField = $('form#socketform #host');
   var portField = $('form#socketform #port');
@@ -9,26 +8,22 @@ $(document).ready(function() {
 
   var update = function( status, host, port )
                 {
-                  if ( status == true )
+                  if ( status )
                   {
                     connectButton.addClass('disabled');
-                    disconnectButton.removeClass('disabled');
+                    hostField.attr( 'placeholder', host );
+                    portField.attr( 'placeholder', port );
                   }
                   else
                   {
-                    connectButton.removeClass('disabled');
                     disconnectButton.addClass('disabled');
                   }
-
-                  hostField.attr( 'placeholder', host );
-                  portField.attr( 'placeholder', port );
                 }
 
-  opera.extension.onmessage = function(event)
+  opera.extension.onmessage = function(event) // Initialisation after connect with background.js
                               {
-                                source = event.source; 
-
-                                update( event.data.status, event.data.host, event.data.port );
+                                  source = event.source; 
+                                  update( event.data.status, event.data.host, event.data.port );
                               }
    
   connectButton.on("click",
@@ -43,7 +38,7 @@ $(document).ready(function() {
                                           , 'port': portField.val()
                                         } );
 
-                    return window.close();
+                    return window.close(); // Popup of Opera's extension not close in development mode. Use oex archive
                   });
    
   disconnectButton.on("click",
@@ -56,6 +51,6 @@ $(document).ready(function() {
                                               'action': 'disconnect'
                                             } );
 
-                        return window.close();
+                        return window.close(); // Popup of Opera's extension not close in development mode. Use oex archive
                       });
 });

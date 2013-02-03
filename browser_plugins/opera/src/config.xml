@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets"
 		id="https://github.com/PhilippSchaffrath/LiveRefresh"
-		version="0.5">
+		version="0.8">
 	<name>LiveRefresh</name>
 	<description>Lets you independently connect your tabs to WebSocket-Server. Each time, a tab received "refresh" it will focus and refresh.</description>
-	<author href="http://github.com/yadummer" email="yadummer@gmail.com">Konenko [yadummer] Artem</author>
+	<author href="https://github.com/dummer" email="yadummer@gmail.com">Konenko [yadummer] Artem</author>
 </widget>
